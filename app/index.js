@@ -4,7 +4,6 @@ import { View, Animated, Dimensions, Text, PanResponder } from "react-native";
 import styles from "./styles";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 const colors = ["gray", "red", "blue", "green", "purple"];
 
@@ -16,28 +15,43 @@ class App extends React.Component {
       currentIndex: 0
     };
 
-    this.position = new Animated.ValueXY();
-    this.scale = this.position.x.interpolate({
+    this.positionCenter = new Animated.ValueXY();
+    this.positionLeft = new Animated.ValueXY({ x: -SCREEN_WIDTH + 40, y: 0 });
+    this.currentLeft = [
+      ...this.positionLeft.getTranslateTransform(),
+      { perspective: 800 }
+    ];
+
+    this.scale = this.positionCenter.x.interpolate({
       inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-      outputRange: [1, 0.99, 1]
+      outputRange: [1, 0.95, 1]
     });
   }
 
-  componentWillMount() {
+  // componentDidMount dont work with PanResponder!! need to solve
+  // *undefined is not an object (this.PanResponder.panHandlers)
+  componentWillMount = () => {
     this.PanResponder = PanResponder.create({
-      onStartShouldSetPanResponder: (e, gestureState) => true,
+      onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (e, gestureState) => {
-        this.position.setValue({ x: gestureState.dx, y: 0 });
+        console.log(this.zindex);
+        if (gestureState.dx > 0 && this.state.currentIndex !== 0) {
+          this.positionLeft.setValue({
+            x: -SCREEN_WIDTH + 40 + gestureState.dx,
+            y: 0
+          });
+        } else {
+          this.positionCenter.setValue({ x: gestureState.dx, y: 0 });
+        }
       },
       onPanResponderRelease: (e, gestureState) => {
         if (
-          gestureState.dx < 120 &&
+          gestureState.dx < -100 &&
           this.state.currentIndex !== colors.length - 1
         ) {
-          Animated.spring(this.position, {
+          Animated.spring(this.positionCenter, {
             toValue: { x: -SCREEN_WIDTH + 40, y: 0 },
-            friction: 2,
-            overshootClamping: true,
+            bounciness: 10,
             useNativeDriver: true
           }).start(() => {
             this.setState(
@@ -45,34 +59,37 @@ class App extends React.Component {
                 currentIndex: prevState.currentIndex + 1
               }),
               () => {
-                this.position.setValue({ x: 0, y: 0 });
+                this.positionCenter.setValue({ x: 0, y: 0 });
               }
             );
           });
         }
-        if (gestureState.dx > 120 && this.state.currentIndex !== 0) {
-          this.setState(
-            prevState => ({
-              currentIndex: prevState.currentIndex - 1
-            }),
-            () => {
-              Animated.spring(this.position, {
-                toValue: { x: 0, y: 0 },
-                friction: 2,
-                useNativeDriver: true
-              }).start();
-            }
-          );
-        } else {
-          Animated.spring(this.position, {
+        if (gestureState.dx > 100 && this.state.currentIndex !== 0) {
+          Animated.spring(this.positionLeft, {
             toValue: { x: 0, y: 0 },
-            friction: 2,
+            bounciness: 10,
+            useNativeDriver: true
+          }).start(() => {
+            this.setState(
+              prevState => ({
+                currentIndex: prevState.currentIndex - 1
+              }),
+              () => {
+                this.positionLeft.setValue({ x: 0, y: 0 });
+                this.positionCenter.setValue({ x: 0, y: 0 });
+              }
+            );
+          });
+        } else {
+          Animated.spring(this.positionCenter, {
+            toValue: { x: 0, y: 0 },
+            bounciness: 10,
             useNativeDriver: true
           }).start();
         }
       }
     });
-  }
+  };
 
   render() {
     return (
@@ -87,8 +104,28 @@ class App extends React.Component {
                     {...this.PanResponder.panHandlers}
                     key={item}
                     style={[
-                      { transform: this.position.getTranslateTransform() },
-                      { backgroundColor: item, zIndex: 1 + index },
+                      {
+                        transform: this.positionCenter.getTranslateTransform()
+                      },
+                      { backgroundColor: item, zIndex: 2 },
+                      styles.box
+                    ]}
+                  >
+                    <Text style={styles.text}>{item}</Text>
+                  </Animated.View>
+                );
+              }
+              if (index === this.state.currentIndex - 1) {
+                return (
+                  <Animated.View
+                    {...this.PanResponder.panHandlers}
+                    key={item}
+                    style={[
+                      {
+                        transform: this.currentLeft,
+                        backgroundColor: item,
+                        zIndex: 2
+                      },
                       styles.box
                     ]}
                   >
@@ -99,16 +136,17 @@ class App extends React.Component {
               if (index < this.state.currentIndex) {
                 return (
                   <Animated.View
+                    {...this.PanResponder.panHandlers}
                     key={item}
                     style={[
                       {
                         transform: [
                           { translateX: -SCREEN_WIDTH + 40 },
                           { translateY: 0 },
-                          { perspective: 500 }
+                          { perspective: 800 }
                         ],
                         backgroundColor: item,
-                        zIndex: index
+                        zIndex: -1000
                       },
                       styles.box
                     ]}
@@ -126,7 +164,7 @@ class App extends React.Component {
                         { scale: this.scale },
                         { translateX: 5 + index },
                         { translateY: 5 + index },
-                        { perspective: 500 }
+                        { perspective: 800 }
                       ]
                     },
                     { backgroundColor: item },

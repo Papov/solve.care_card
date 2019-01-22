@@ -13,7 +13,8 @@ const styles = StyleSheet.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    position: "absolute"
+    position: "absolute",
+    borderRadius: 4
   },
   header: {
     height: 70,
@@ -35,7 +36,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flex: 1,
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT - 110
+    maxHeight: SCREEN_HEIGHT - 110,
+    paddingVertical: 30
   },
   text: {
     color: "#fff",
