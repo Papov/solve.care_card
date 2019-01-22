@@ -1,55 +1,43 @@
 import React from "react";
-import { View, Dimensions, Animated, Image, PanResponder } from "react-native";
+import { View, Animated, Dimensions, Text, PanResponder } from "react-native";
 
-const SCREEN_HEIGHT = Dimensions.get("window").height;
+import styles from "./styles";
+
 const SCREEN_WIDTH = Dimensions.get("window").width;
+const SCREEN_HEIGHT = Dimensions.get("window").height;
 
-const Users = [
-  { id: "1", uri: require("../assets/image1.jpg") },
-  { id: "2", uri: require("../assets/image2.jpg") },
-  { id: "3", uri: require("../assets/image3.png") },
-  { id: "4", uri: require("../assets/image4.jpg") }
-];
+const colors = ["gray", "red", "blue", "green", "purple"];
 
-class Card extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.position = new Animated.ValueXY();
-    this.rotate = this.position.x.interpolate({
-      inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
-      outputRange: ["-5deg", "0deg", "5deg"],
-      extrapolate: "clamp"
-    });
-
-    this.rotateAndTranslate = {
-      transform: [
-        { rotate: this.rotate },
-        ...this.position.getTranslateTransform()
-      ]
-    };
-
-    this.scaleImages = this.position.x.interpolate({
-      inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
-      outputRange: [1, 0.8, 1],
-      extrapolate: "clamp"
-    });
+class App extends React.Component {
+  constructor() {
+    super();
 
     this.state = {
       currentIndex: 0
     };
+
+    this.position = new Animated.ValueXY();
+    this.scale = this.position.x.interpolate({
+      inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+      outputRange: [1, 0.99, 1]
+    });
   }
 
-  componentWillMount = () => {
+  componentWillMount() {
     this.PanResponder = PanResponder.create({
       onStartShouldSetPanResponder: (e, gestureState) => true,
       onPanResponderMove: (e, gestureState) => {
         this.position.setValue({ x: gestureState.dx, y: 0 });
       },
       onPanResponderRelease: (e, gestureState) => {
-        if (gestureState.dx > 120) {
+        if (
+          gestureState.dx < 120 &&
+          this.state.currentIndex !== colors.length - 1
+        ) {
           Animated.spring(this.position, {
-            toValue: { x: SCREEN_WIDTH + 100, y: 0 },
+            toValue: { x: -SCREEN_WIDTH + 40, y: 0 },
+            friction: 2,
+            overshootClamping: true,
             useNativeDriver: true
           }).start(() => {
             this.setState(
@@ -61,99 +49,100 @@ class Card extends React.Component {
               }
             );
           });
-        } else if (gestureState.dx < -120) {
-          Animated.spring(this.position, {
-            toValue: { x: -SCREEN_WIDTH - 100, y: 0 },
-            useNativeDriver: true
-          }).start(() => {
-            this.setState(
-              prevState => ({
-                currentIndex: prevState.currentIndex + 1
-              }),
-              () => {
-                this.position.setValue({ x: 0, y: 0 });
-              }
-            );
-          });
+        }
+        if (gestureState.dx > 120 && this.state.currentIndex !== 0) {
+          this.setState(
+            prevState => ({
+              currentIndex: prevState.currentIndex - 1
+            }),
+            () => {
+              Animated.spring(this.position, {
+                toValue: { x: 0, y: 0 },
+                friction: 2,
+                useNativeDriver: true
+              }).start();
+            }
+          );
         } else {
           Animated.spring(this.position, {
             toValue: { x: 0, y: 0 },
-            friction: 4,
+            friction: 2,
             useNativeDriver: true
           }).start();
         }
       }
     });
-  };
-
-  renderUser = () => {
-    return Users.map((user, i) => {
-      if (i < this.state.currentIndex) {
-        return null;
-      } else if (i === this.state.currentIndex) {
-        return (
-          <Animated.View
-            {...this.PanResponder.panHandlers}
-            key={user.id}
-            style={[
-              this.rotateAndTranslate,
-              {
-                height: SCREEN_HEIGHT - 120,
-                width: SCREEN_WIDTH,
-                padding: 10,
-                position: "absolute"
-              }
-            ]}
-          >
-            <Image
-              style={{
-                flex: 1,
-                height: null,
-                width: null,
-                resizeMode: "cover",
-                borderRadius: 20
-              }}
-              source={user.uri}
-            />
-          </Animated.View>
-        );
-      } else {
-        return (
-          <Animated.View
-            key={user.id}
-            style={{
-              transform: [{ scale: this.scaleImages }],
-              height: SCREEN_HEIGHT - 120,
-              width: SCREEN_WIDTH,
-              padding: 10,
-              position: "absolute"
-            }}
-          >
-            <Image
-              style={{
-                flex: 1,
-                height: null,
-                width: null,
-                resizeMode: "cover",
-                borderRadius: 20
-              }}
-              source={user.uri}
-            />
-          </Animated.View>
-        );
-      }
-    }).reverse();
-  };
+  }
 
   render() {
     return (
-      <View style={{ flex: 1 }}>
-        <View style={{ height: 60 }} />
-        <View style={{ flex: 1 }}>{this.renderUser()}</View>
-        <View style={{ height: 60 }} />
+      <View style={styles.container}>
+        <View style={styles.header} />
+        <View style={styles.main}>
+          {colors
+            .map((item, index) => {
+              if (index === this.state.currentIndex) {
+                return (
+                  <Animated.View
+                    {...this.PanResponder.panHandlers}
+                    key={item}
+                    style={[
+                      { transform: this.position.getTranslateTransform() },
+                      { backgroundColor: item, zIndex: 1 + index },
+                      styles.box
+                    ]}
+                  >
+                    <Text style={styles.text}>{item}</Text>
+                  </Animated.View>
+                );
+              }
+              if (index < this.state.currentIndex) {
+                return (
+                  <Animated.View
+                    key={item}
+                    style={[
+                      {
+                        transform: [
+                          { translateX: -SCREEN_WIDTH + 40 },
+                          { translateY: 0 },
+                          { perspective: 500 }
+                        ],
+                        backgroundColor: item,
+                        zIndex: index
+                      },
+                      styles.box
+                    ]}
+                  >
+                    <Text style={styles.text}>{item}</Text>
+                  </Animated.View>
+                );
+              }
+              return (
+                <Animated.View
+                  key={item}
+                  style={[
+                    {
+                      transform: [
+                        { scale: this.scale },
+                        { translateX: 5 + index },
+                        { translateY: 5 + index },
+                        { perspective: 500 }
+                      ]
+                    },
+                    { backgroundColor: item },
+                    styles.box
+                  ]}
+                >
+                  <Text style={styles.text}>{item}</Text>
+                </Animated.View>
+              );
+            })
+            .reverse()}
+        </View>
+        <View style={styles.footer} />
       </View>
     );
   }
 }
 
-export default Card;
+export default App;
