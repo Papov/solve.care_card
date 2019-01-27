@@ -36,7 +36,10 @@ class App extends React.Component {
 
     this.currentIndex = 0;
 
-    this.viewabilityConfig = { viewAreaCoveragePercentThreshold: -50 };
+    this.viewabilityConfig = {
+      waitForInteraction: true,
+      viewAreaCoveragePercentThreshold: -50
+    };
 
     this.data = [...colors];
 
@@ -48,7 +51,10 @@ class App extends React.Component {
     this.PanResponder = PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (e, gestures) => {
-        if (gestures.dx <= 120 && this.currentIndex === colors.length - 1) {
+        if (
+          gestures.dx <= 120 &&
+          this.currentIndex === this.state.data.length - 1
+        ) {
           console.log("show preloader!");
         }
       },
@@ -76,6 +82,7 @@ class App extends React.Component {
   }
 
   showActivitiIndicator = item => {
+    console.log(item);
     this.currentIndex = item.viewableItems[0].index;
   };
 
@@ -101,6 +108,7 @@ class App extends React.Component {
           pagingEnabled
           style={{ width: SCREEN }}
           keyExtractor={item => item}
+          scrollEventThrottle={16}
           onViewableItemsChanged={this.showActivitiIndicator}
           viewabilityConfig={this.viewabilityConfig}
         />
